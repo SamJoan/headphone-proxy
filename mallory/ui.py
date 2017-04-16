@@ -3,48 +3,22 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant
 
-class RequestHistoryModel(QAbstractTableModel):
-    def __init__(self, data, parent=None, *args):
-        """
-        data should contain a list of dicts for now
-        """
-        QAbstractTableModel.__init__(self, parent, *args)
-        self.arraydata = data
-
-    def rowCount(self, parent):
-        return len(self.arraydata)
-
-    def columnCount(self, parent):
-        return len(self.arraydata[0].keys())
-
-    def data(self, index, role):
-        if not index.isValid():
-            return QVariant()
-        elif role != Qt.DisplayRole:
-            return QVariant()
-
-        col = index.column()
-        key = list(self.arraydata[index.row()].keys())[index.column()]
-
-        return QVariant(self.arraydata[index.row()][key])
-
-    def headerData(self, col, orientation, role):
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            return QVariant(list(self.arraydata[0].keys())[col])
-
-        return QVariant()
-
-    def sort(self, Ncol, order):
-        """
-        Sort table by given column number.
-        """
-        self.emit(SIGNAL("layoutAboutToBeChanged()"))
-        self.arraydata = sorted(self.arraydata, key=operator.itemgetter(Ncol))
-        if order == Qt.DescendingOrder:
-            self.arraydata.reverse()
-        self.emit(SIGNAL("layoutChanged()"))
-
 class HPMainWindow(QMainWindow):
+    """
+    Displays a history of all requests seen by the proxy.
+    """
+    historyWidget = None
+
+    """
+    Displays a raw HTTP request for an individual request that was clicked by the user.
+    """
+    requestWidget = None
+
+    """
+    Displays a raw HTTP response for an individual request that was clicked by the user.
+    """
+    responseWidget = None
+
     def __init__(self):
         super().__init__()
 
@@ -60,9 +34,8 @@ class HPMainWindow(QMainWindow):
 
         return exitAction
 
-    def _initFakeModel(self):
+    def _initFakeTable(self, tableWidget):
         fakeRequest = {
-            "id": "1",
             "host": "http://localhost",
             "method": "GET",
             "path": "/test/index.php",
@@ -71,11 +44,59 @@ class HPMainWindow(QMainWindow):
             "title": "HOw to hax0r.",
         }
 
+        col_names = list(fakeRequest.keys())
+        cols = len(col_names)
+        rows = 300
+        tableWidget.setRowCount(rows)
+        tableWidget.setColumnCount(cols)
+        tableWidget.setHorizontalHeaderLabels(col_names)
+        tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)
+
         fakeData = []
-        for nb in range(35):
-            fakeData.append(fakeRequest)
+        for row in range(300):
+            for col in range(cols):
+                key = list(fakeRequest.keys())[col]
+                val = fakeRequest[key]
+
+                tableWidget.setItem(row, col, QTableWidgetItem(val))
 
         return fakeData
+
+    def _requestClicked(self, row, column):
+        self.requestWidget.setText("""GET /test/index.php HTTP/1.1
+Host: localhost
+
+""")
+        self.responseWidget.setText("""HTTP/1.1 200 OK
+Content-type: text/html
+
+OK, you got it
+""")
+
+    def _initHistory(self):
+        historyWidget = QTableWidget(self)
+        historyWidget.setSelectionBehavior(QTableView.SelectRows)
+        historyWidget.cellClicked.connect(self._requestClicked)
+        self._initFakeTable(historyWidget)
+
+        return historyWidget
+
+    def _initDetailView(self):
+
+        requestWidget = QTextEdit()
+        requestWidget.setReadOnly(True)
+
+        responseWidget = QTextEdit()
+        responseWidget.setReadOnly(True)
+
+        return requestWidget, responseWidget
+
+    def _initTabs(self, requestWidget, responseWidget):
+        tabsWidget = QTabWidget()
+        tabsWidget.addTab(requestWidget, "Request")
+        tabsWidget.addTab(responseWidget, "Response")
+
+        return tabsWidget
 
     def initUI(self):
         centralWidget = QWidget()
@@ -83,12 +104,13 @@ class HPMainWindow(QMainWindow):
         centralWidget.setLayout(layout)
         self.setCentralWidget(centralWidget)
 
-        m = RequestHistoryModel(self._initFakeModel())
-        tableView = QTableView()
-        tableView.setSelectionBehavior(QTableView.SelectRows)
-        tableView.setModel(m)
-        layout.addWidget(tableView)
-        layout.addWidget(QTextEdit())
+        self.historyWidget = self._initHistory()
+        self.requestWidget, self.responseWidget = self._initDetailView()
+
+        tabWidget = self._initTabs(self.requestWidget, self.responseWidget)
+
+        layout.addWidget(self.historyWidget)
+        layout.addWidget(tabWidget)
 
         self.statusBar()
         self.setGeometry(300, 300, 1024, 768)
@@ -109,5 +131,6 @@ class HPMainWindow(QMainWindow):
 
 def init():
     app = QApplication(sys.argv)
+    # app.setStyle(QStyleFactory.create('Windows'))
     ex = HPMainWindow()
     sys.exit(app.exec_())
