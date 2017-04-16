@@ -24,16 +24,6 @@ class HPMainWindow(QMainWindow):
 
         self.initUI()
 
-    def _exitAction(self):
-        smileyIcon = QIcon('icons/smiley.png')
-        exitAction = QAction(smileyIcon, 'Exit', self)
-        exitAction.setShortcut('Ctrl+Q')
-        exitAction.setStatusTip('Smiley face will wreck your shit.')
-
-        exitAction.triggered.connect(self.close)
-
-        return exitAction
-
     def _initFakeTable(self, tableWidget):
         fakeRequest = {
             "host": "http://localhost",
@@ -120,14 +110,24 @@ OK, you got it
         self.show()
 
     def initButtons(self):
-        exitAction = self._exitAction()
+        smileyIcon = QIcon('icons/smiley.png')
+
+        exitAction = QAction(smileyIcon, 'Exit', self)
+        exitAction.setStatusTip('Smiley face will wreck your shit.')
+        exitAction.triggered.connect(self.close)
+
+        justSmileAction = QAction(smileyIcon, 'Smile', self)
+        justSmileAction.setStatusTip('Proxy now listening on port 8080.')
 
         menubar = self.menuBar()
         fileMenu = menubar.addMenu('&File')
         fileMenu.addAction(exitAction)
 
+        exitAction = QAction(smileyIcon, 'Exit', self)
+        exitAction.setStatusTip('Smiley face will wreck your shit.')
+
         toolbar = self.addToolBar('MainToolbar')
-        toolbar.addAction(exitAction)
+        toolbar.addAction(justSmileAction)
 
 def init():
     app = QApplication(sys.argv)
