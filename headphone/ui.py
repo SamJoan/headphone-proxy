@@ -4,6 +4,7 @@ import zeroless
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import *
+from headphone.models import State, DisplayFlow
 
 REFRESH_INTERVAL = 100
 IPC_PORT = 31337
@@ -11,27 +12,36 @@ IPC_PORT = 31337
 main_window = None
 
 class RequestHistoryTable(QTableWidget):
-    def initTable(self):
-        col_names = ["Host", "Method", "Path", "Status code", "Length"]
+    state = None
+
+    def init_table(self):
+        self.state = State.get()
+        col_names = DisplayFlow.cols()
+
         self.setHorizontalHeaderLabels(col_names)
         cols = len(col_names)
 
         self.setRowCount(0)
         self.setColumnCount(cols)
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.setSortingEnabled(True)
 
-    def addRequest(self, flow):
-        request = flow.request
-        nbRows = self.rowCount()
+    def add_flow(self, flow):
 
-        self.insertRow(nbRows)
-        self.setItem(nbRows, 0, QTableWidgetItem(request.host))
-        self.setItem(nbRows, 1, QTableWidgetItem(request.method))
-        self.setItem(nbRows, 2, QTableWidgetItem(request.path))
-        self.setItem(nbRows, 3, QTableWidgetItem("wuhevs"))
+        # request = flow.request
+        row_number = self.rowCount()
 
-    def updateRequest(self, flow):
-        print("updateRequest: ", flow)
+        # self.state.add_flow(flow, row_number)
+
+        self.insertRow(row_number)
+        # print(request.host, "awdawd")
+        self.setItem(row_number, 0, QTableWidgetItem("aa"))
+        # self.setItem(row_number, 1, QTableWidgetItem(request.method))
+        # self.setItem(row_number, 2, QTableWidgetItem(request.path))
+        # self.setItem(row_number, 3, QTableWidgetItem("wuhevs"))
+
+    def update_flow(self, flow):
+        self.state.update_flow(flow)
 
 class HPMainWindow(QMainWindow):
     """
@@ -79,12 +89,11 @@ OK, you got it
         history = RequestHistoryTable(self)
         history.setSelectionBehavior(QTableView.SelectRows)
         history.cellClicked.connect(self._requestClicked)
-        history.initTable()
+        history.init_table()
 
         return history
 
     def _initDetailView(self):
-
         requestWidget = QTextEdit()
         requestWidget.setReadOnly(True)
 

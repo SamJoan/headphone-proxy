@@ -26,57 +26,32 @@ class HeadphoneMaster(master.Master):
         self.view.sig_view_add.connect(self._sig_view_add)
         self.view.sig_view_remove.connect(self._sig_view_remove)
         self.view.sig_view_update.connect(self._sig_view_update)
-        self.view.sig_view_refresh.connect(self._sig_view_refresh)
 
         self.addons.add(*addons.default_addons())
         self.addons.add(
-            # intercept.Intercept(),
+            intercept.Intercept(),
             self.view,
-            # self.events,
         )
 
     def _sig_view_add(self, view, flow):
-        self.main_window.history.addRequest(flow)
-        # app.ClientConnection.broadcast(
-        #     resource="flows",
-        #     cmd="add",
-        #     data=app.flow_to_json(flow)
-        # )
+        self.main_window.history.add_flow(flow)
 
     def _sig_view_update(self, view, flow):
-        self.main_window.history.updateRequest(flow)
-        # app.ClientConnection.broadcast(
-        #     resource="flows",
-        #     cmd="update",
-        #     data=app.flow_to_json(flow)
-        # )
+        self.main_window.history.update_flow(flow)
 
     def _sig_view_remove(self, view, flow):
-        print(view, flow)
         raise Exception('wuht why')
-        # app.ClientConnection.broadcast(
-        #     resource="flows",
-        #     cmd="remove",
-        #     data=flow.id
-        # )
-
-    def _sig_view_refresh(self, view):
-        print(view, "qdwqdw")
-        # app.ClientConnection.broadcast(
-            # resource="flows",
-            # cmd="reset"
-        # )
 
     def run(self):
         iol = tornado.ioloop.IOLoop.instance()
         iol.add_callback(self.start)
-        tornado.ioloop.PeriodicCallback(lambda: self.tick(timeout=0), 5).start()
-        t = Thread(target=lambda: iol.start()).start()
+        # tornado.ioloop.PeriodicCallback(lambda: self.tick(timeout=0), 5).start()
+        # t = Thread(target=lambda: iol.start()).start()
 
         app, self.main_window = headphone.ui.init()
+        Thread(target=lambda: self.main_window.history.add_flow(None)).start()
         sys.exit(app.exec_())
 
 def main():
     hpm = HeadphoneMaster({}, ProxyServer(ProxyConfig(options.Options(listen_port=8080))))
     hpm.run()
-    # mallory.ui.init()
