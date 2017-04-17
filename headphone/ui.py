@@ -8,11 +8,36 @@ from PyQt5.QtCore import *
 REFRESH_INTERVAL = 100
 IPC_PORT = 31337
 
+main_window = None
+
+class RequestHistoryTable(QTableWidget):
+    def initTable(self):
+        col_names = ["Host", "Method", "Path", "Status code", "Length"]
+        self.setHorizontalHeaderLabels(col_names)
+        cols = len(col_names)
+
+        self.setRowCount(0)
+        self.setColumnCount(cols)
+        self.setEditTriggers(QAbstractItemView.NoEditTriggers)
+
+    def addRequest(self, flow):
+        request = flow.request
+        nbRows = self.rowCount()
+
+        self.insertRow(nbRows)
+        self.setItem(nbRows, 0, QTableWidgetItem(request.host))
+        self.setItem(nbRows, 1, QTableWidgetItem(request.method))
+        self.setItem(nbRows, 2, QTableWidgetItem(request.path))
+        self.setItem(nbRows, 3, QTableWidgetItem("wuhevs"))
+
+    def updateRequest(self, flow):
+        print("updateRequest: ", flow)
+
 class HPMainWindow(QMainWindow):
     """
     Displays a history of all requests seen by the proxy.
     """
-    historyWidget = None
+    history = None
 
     """
     Displays a raw HTTP request for an individual request that was clicked by the user.
@@ -31,13 +56,6 @@ class HPMainWindow(QMainWindow):
 
         self.initUI()
 
-    def _initIPC(self):
-        sock = socket.socket()
-        sock.connect(('127.0.0.1', IPC_PORT))
-        sock.setblocking(0)
-
-        return sock
-
     def _updateHistory(self):
         try:
             if not self.ipc:
@@ -45,34 +63,6 @@ class HPMainWindow(QMainWindow):
 
         finally:
             QTimer.singleShot(REFRESH_INTERVAL, self._updateHistory)
-
-    def _initFakeTable(self, tableWidget):
-        fakeRequest = {
-            "host": "http://localhost",
-            "method": "GET",
-            "path": "/test/index.php",
-            "response_status": "200",
-            "length": "300",
-            "title": "HOw to hax0r.",
-        }
-
-        col_names = list(fakeRequest.keys())
-        cols = len(col_names)
-        rows = 300
-        tableWidget.setRowCount(rows)
-        tableWidget.setColumnCount(cols)
-        tableWidget.setHorizontalHeaderLabels(col_names)
-        tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)
-
-        fakeData = []
-        for row in range(300):
-            for col in range(cols):
-                key = list(fakeRequest.keys())[col]
-                val = fakeRequest[key]
-
-                tableWidget.setItem(row, col, QTableWidgetItem(val))
-
-        return fakeData
 
     def _requestClicked(self, row, column):
         self.requestWidget.setText("""GET /test/index.php HTTP/1.1
@@ -86,12 +76,12 @@ OK, you got it
 """)
 
     def _initHistory(self):
-        historyWidget = QTableWidget(self)
-        historyWidget.setSelectionBehavior(QTableView.SelectRows)
-        historyWidget.cellClicked.connect(self._requestClicked)
-        self._initFakeTable(historyWidget)
+        history = RequestHistoryTable(self)
+        history.setSelectionBehavior(QTableView.SelectRows)
+        history.cellClicked.connect(self._requestClicked)
+        history.initTable()
 
-        return historyWidget
+        return history
 
     def _initDetailView(self):
 
@@ -116,12 +106,12 @@ OK, you got it
         centralWidget.setLayout(layout)
         self.setCentralWidget(centralWidget)
 
-        self.historyWidget = self._initHistory()
+        self.history = self._initHistory()
         self.requestWidget, self.responseWidget = self._initDetailView()
 
         tabWidget = self._initTabs(self.requestWidget, self.responseWidget)
 
-        layout.addWidget(self.historyWidget)
+        layout.addWidget(self.history)
         layout.addWidget(tabWidget)
 
         self.statusBar()
@@ -156,5 +146,6 @@ OK, you got it
 
 def init():
     app = QApplication(sys.argv)
-    ex = HPMainWindow()
-    sys.exit(app.exec_())
+    main_window = HPMainWindow()
+
+    return app, main_window
