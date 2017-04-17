@@ -1,7 +1,12 @@
 import sys
+import socket
+import zeroless
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant
+from PyQt5.QtCore import *
+
+REFRESH_INTERVAL = 100
+IPC_PORT = 31337
 
 class HPMainWindow(QMainWindow):
     """
@@ -19,10 +24,27 @@ class HPMainWindow(QMainWindow):
     """
     responseWidget = None
 
+    ipc = None
+
     def __init__(self):
         super().__init__()
 
         self.initUI()
+
+    def _initIPC(self):
+        sock = socket.socket()
+        sock.connect(('127.0.0.1', IPC_PORT))
+        sock.setblocking(0)
+
+        return sock
+
+    def _updateHistory(self):
+        try:
+            if not self.ipc:
+                self.ipc = zeroless.Server(port=IPC_PORT).pull()
+
+        finally:
+            QTimer.singleShot(REFRESH_INTERVAL, self._updateHistory)
 
     def _initFakeTable(self, tableWidget):
         fakeRequest = {
@@ -107,6 +129,9 @@ OK, you got it
         self.setWindowTitle('Headphone HTTP Proxy')
         self.setWindowIcon(QIcon('icons/smiley.png'))
         self.initButtons()
+
+        self._updateHistory()
+
         self.show()
 
     def initButtons(self):
@@ -131,6 +156,5 @@ OK, you got it
 
 def init():
     app = QApplication(sys.argv)
-    # app.setStyle(QStyleFactory.create('Windows'))
     ex = HPMainWindow()
     sys.exit(app.exec_())

@@ -1,4 +1,4 @@
-from mallory.main import main
+from headphone.main import main
 
 if __name__ == "__main__":
     main()
